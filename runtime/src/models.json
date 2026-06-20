@@ -1,0 +1,79 @@
+[
+    {
+        "id": "whisper-tiny",
+        "name": "Whisper Tiny",
+        "backend": "whisper.cpp",
+        "size": 77700000,
+        "filename": "ggml-tiny.bin",
+        "download_url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
+        "languages": [
+            "multilingual"
+        ]
+    },
+    {
+        "id": "whisper-base",
+        "name": "Whisper Base",
+        "backend": "whisper.cpp",
+        "size": 148000000,
+        "filename": "ggml-base.bin",
+        "download_url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
+        "languages": [
+            "multilingual"
+        ]
+    },
+    {
+        "id": "whisper-small",
+        "name": "Whisper Small",
+        "backend": "whisper.cpp",
+        "size": 488000000,
+        "filename": "ggml-small.bin",
+        "download_url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
+        "languages": [
+            "multilingual"
+        ]
+    },
+    {
+        "id": "whisper-medium",
+        "name": "Whisper Medium",
+        "backend": "whisper.cpp",
+        "size": 1530000000,
+        "filename": "ggml-medium.bin",
+        "download_url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin",
+        "languages": [
+            "multilingual"
+        ]
+    },
+    {
+        "id": "whisper-large-v3",
+        "name": "Whisper Large V3",
+        "backend": "whisper.cpp",
+        "size": 3100000000,
+        "filename": "ggml-large-v3.bin",
+        "download_url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin",
+        "languages": [
+            "multilingual"
+        ]
+    },
+    {
+        "id": "whisper-large-v3-turbo",
+        "name": "Whisper Large V3 Turbo",
+        "backend": "whisper.cpp",
+        "size": 1620000000,
+        "filename": "ggml-large-v3-turbo.bin",
+        "download_url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin",
+        "languages": [
+            "multilingual"
+        ]
+    },
+    {
+        "id": "parakeet-tdt-0.6b-v2",
+        "name": "Parakeet",
+        "backend": "parakeet",
+        "size": 2470000000,
+        "filename": "parakeet-tdt-0.6b-v2.nemo",
+        "download_url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2/resolve/main/parakeet-tdt-0.6b-v2.nemo",
+        "languages": [
+            "english"
+        ]
+    }
+]
