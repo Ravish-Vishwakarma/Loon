@@ -1,3 +1,4 @@
+use crate::api::state::AppState;
 use axum::{Json, extract::Path, extract::State};
 use futures_util::StreamExt;
 use reqwest;
@@ -32,13 +33,13 @@ pub struct DownloadResponse {
 }
 
 pub async fn downloaded_models(
-    State(models_dir): State<Arc<String>>,
+    State(state): State<Arc<AppState>>,
 ) -> Json<Vec<Model>> {
     let models: Vec<Model> = serde_json::from_str(include_str!("../models.json")).unwrap();
 
     let mut downloaded = Vec::new();
     for model in models {
-        let file_path = format!("{}\\{}", models_dir, model.filename);
+        let file_path = format!("{}\\{}", state.models_dir, model.filename);
         if fs::try_exists(&file_path).await.unwrap_or(false) {
             downloaded.push(model);
         }
@@ -56,7 +57,7 @@ pub async fn available_models() -> Json<Vec<Model>> {
 }
 
 pub async fn download_model_by_id(
-    State(models_dir): State<Arc<String>>,
+    State(state): State<Arc<AppState>>,
     Json(req): Json<DownloadRequest>,
 ) -> Json<DownloadResponse> {
     let models: Vec<Model> = serde_json::from_str(include_str!("../models.json")).unwrap();
@@ -72,7 +73,7 @@ pub async fn download_model_by_id(
         }
     };
 
-    let output_path = format!("{}\\{}", models_dir, model.filename);
+    let output_path = format!("{}\\{}", state.models_dir, model.filename);
 
     match download_model(&model.download_url, &output_path).await {
         Ok(_) => Json(DownloadResponse {
@@ -89,7 +90,7 @@ pub async fn download_model_by_id(
 }
 
 pub async fn delete_model_by_id(
-    State(models_dir): State<Arc<String>>,
+    State(state): State<Arc<AppState>>,
     Path(model_id): Path<String>,
 ) -> Json<DownloadResponse> {
     let models: Vec<Model> = serde_json::from_str(include_str!("../models.json")).unwrap();
@@ -105,7 +106,7 @@ pub async fn delete_model_by_id(
         }
     };
 
-    let file_path = format!("{}\\{}", models_dir, model.filename);
+    let file_path = format!("{}\\{}", state.models_dir, model.filename);
 
     match fs::remove_file(&file_path).await {
         Ok(_) => Json(DownloadResponse {
