@@ -1,9 +1,10 @@
-use axum::{extract::State, Json};
+use axum::{Json, extract::Path, extract::State};
 use futures_util::StreamExt;
 use reqwest;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use tokio::fs;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
@@ -42,8 +43,7 @@ pub async fn download_model_by_id(
     State(models_dir): State<Arc<String>>,
     Json(req): Json<DownloadRequest>,
 ) -> Json<DownloadResponse> {
-    let models: Vec<Model> =
-        serde_json::from_str(include_str!("../models.json")).unwrap();
+    let models: Vec<Model> = serde_json::from_str(include_str!("../models.json")).unwrap();
 
     let model = match models.iter().find(|m| m.id == req.model_id) {
         Some(m) => m,
@@ -52,7 +52,7 @@ pub async fn download_model_by_id(
                 model_id: req.model_id,
                 status: "error: model not found".to_string(),
                 path: String::new(),
-            })
+            });
         }
     };
 
@@ -68,6 +68,39 @@ pub async fn download_model_by_id(
             model_id: model.id.clone(),
             status: format!("error: {}", e),
             path: String::new(),
+        }),
+    }
+}
+
+pub async fn delete_model_by_id(
+    State(models_dir): State<Arc<String>>,
+    Path(model_id): Path<String>,
+) -> Json<DownloadResponse> {
+    let models: Vec<Model> = serde_json::from_str(include_str!("../models.json")).unwrap();
+
+    let model = match models.iter().find(|m| m.id == model_id) {
+        Some(m) => m,
+        None => {
+            return Json(DownloadResponse {
+                model_id,
+                status: "error: model not found".to_string(),
+                path: String::new(),
+            });
+        }
+    };
+
+    let file_path = format!("{}\\{}", models_dir, model.filename);
+
+    match fs::remove_file(&file_path).await {
+        Ok(_) => Json(DownloadResponse {
+            model_id,
+            status: "deleted".to_string(),
+            path: file_path,
+        }),
+        Err(e) => Json(DownloadResponse {
+            model_id,
+            status: format!("error: {}", e),
+            path: file_path,
         }),
     }
 }

@@ -1,4 +1,4 @@
-use axum::{Router, routing::get, routing::post};
+use axum::{Router, routing::delete, routing::get, routing::post};
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
@@ -13,6 +13,7 @@ async fn main() {
         .route("/v1/health", get(api::health::health_check))
         .route("/v1/models/available", get(api::models::available_models))
         .route("/v1/models/download", post(api::models::download_model_by_id))
+        .route("/v1/models/{model_id}", delete(api::models::delete_model_by_id))
         .layer(CorsLayer::permissive())
         .with_state(models_dir);
 
