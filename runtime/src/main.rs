@@ -1,15 +1,20 @@
 use axum::{Router, routing::get, routing::post};
-use tower_http::cors::{Any, CorsLayer};
+use std::sync::Arc;
+use tower_http::cors::CorsLayer;
 
 mod api;
 mod backends;
 
 #[tokio::main]
 async fn main() {
+    let models_dir = Arc::new("models".to_string());
+
     let app = Router::new()
         .route("/v1/health", get(api::health::health_check))
-        .route("/v1/models/available", get(api::models::available_models));
-    // .route("/transcribe", post(api::transcriptions::transcribe))
+        .route("/v1/models/available", get(api::models::available_models))
+        .route("/v1/models/download", post(api::models::download_model_by_id))
+        .layer(CorsLayer::permissive())
+        .with_state(models_dir);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:15000")
         .await
