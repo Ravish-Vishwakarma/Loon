@@ -31,6 +31,22 @@ pub struct DownloadResponse {
     pub path: String,
 }
 
+pub async fn downloaded_models(
+    State(models_dir): State<Arc<String>>,
+) -> Json<Vec<Model>> {
+    let models: Vec<Model> = serde_json::from_str(include_str!("../models.json")).unwrap();
+
+    let mut downloaded = Vec::new();
+    for model in models {
+        let file_path = format!("{}\\{}", models_dir, model.filename);
+        if fs::try_exists(&file_path).await.unwrap_or(false) {
+            downloaded.push(model);
+        }
+    }
+
+    Json(downloaded)
+}
+
 pub async fn available_models() -> Json<Vec<Model>> {
     let json_str = include_str!("../models.json");
 

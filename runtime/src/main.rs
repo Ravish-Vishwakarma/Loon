@@ -12,6 +12,7 @@ async fn main() {
     let app = Router::new()
         .route("/v1/health", get(api::health::health_check))
         .route("/v1/models/available", get(api::models::available_models))
+        .route("/v1/models/downloaded", get(api::models::downloaded_models))
         .route("/v1/models/download", post(api::models::download_model_by_id))
         .route("/v1/models/{model_id}", delete(api::models::delete_model_by_id))
         .layer(CorsLayer::permissive())
