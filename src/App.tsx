@@ -1,35 +1,23 @@
-import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
-import { Button } from "./components/ui/button";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { LauncherPage } from "./pages/launcher";
+import { SettingPage } from "./pages/setting";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  // const [greetMsg, setGreetMsg] = useState("");
+  // const [name, setName] = useState("");
 
-  async function greet() {
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  // async function greet() {
+  //   setGreetMsg(await invoke("greet", { name }));
+  // }
 
   return (
-    <main className="container">
-      <Button>Shad CN Button</Button>
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LauncherPage />} />
+        <Route path="/setting" element={<SettingPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
