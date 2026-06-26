@@ -1,7 +1,12 @@
+import { Mic } from 'lucide-react';
+
 function LauncherPage() {
     return (
         <>
-            Hello
+            <div data-tauri-drag-region className='flex flex-col'>
+                <Mic />
+                Hello
+            </div>
         </>
     )
 }

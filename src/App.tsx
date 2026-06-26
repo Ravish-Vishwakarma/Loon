@@ -4,13 +4,6 @@ import { LauncherPage } from "./pages/launcher";
 import { SettingPage } from "./pages/setting";
 
 function App() {
-  // const [greetMsg, setGreetMsg] = useState("");
-  // const [name, setName] = useState("");
-
-  // async function greet() {
-  //   setGreetMsg(await invoke("greet", { name }));
-  // }
-
   return (
     <BrowserRouter>
       <Routes>
