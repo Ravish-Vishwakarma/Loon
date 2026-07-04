@@ -1,3 +1,5 @@
+mod db;
+
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
@@ -22,6 +24,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            db::initialize_database().expect("failed to initialize sqlite database");
             tauri::async_runtime::spawn(async {
                 runtime::start_server(
                     "../models".to_string(),
