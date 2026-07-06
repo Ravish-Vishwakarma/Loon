@@ -1,20 +1,17 @@
+mod app_path;
+mod config;
 mod db;
-
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
     Manager,
 };
 
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
 fn open_setting_window(app: &tauri::AppHandle) {
     if app.get_webview_window("settings").is_some() {
         return;
     }
-    tauri::WebviewWindowBuilder::new(app, "settings", tauri::WebviewUrl::App("/setting".into()))
+    tauri::WebviewWindowBuilder::new(app, "settings", tauri::WebviewUrl::App("/home".into()))
         .title("Settings")
         .build()
         .unwrap();
@@ -24,7 +21,24 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            db::initialize_database().expect("failed to initialize sqlite database");
+            // App Path ------------------------------------- //
+            let path = app
+                .path()
+                .app_local_data_dir()
+                .expect("failed to get app data directory");
+
+            app_path::initialize(path);
+            // ---------------------------------------------- //
+
+            // CONFIG --------------------------------------- //
+            config::initialize_config()?;
+            // ---------------------------------------------- //
+
+            // DATABASE ------------------------------------- //
+            db::initialize_database()?;
+            // ---------------------------------------------- //
+
+            // RUNTIME -------------------------------------- //
             tauri::async_runtime::spawn(async {
                 runtime::start_server(
                     "../models".to_string(),
@@ -32,10 +46,13 @@ pub fn run() {
                 )
                 .await;
             });
+            // ---------------------------------------------- //
+
+            // SYSTEM TRAY ---------------------------------- //
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let new_i = MenuItem::with_id(app, "setting", "Setting", true, None::<&str>)?;
             let tray_menu = Menu::with_items(app, &[&quit_i, &new_i])?;
-            let tray = TrayIconBuilder::new()
+            TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&tray_menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
@@ -45,11 +62,16 @@ pub fn run() {
                         println!("Menu Not Found")
                     }
                 })
+                .tooltip("Loon")
                 .build(app)?;
+            // ---------------------------------------------- //
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            db::create_transcription,
+            db::read_transcriptions
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
