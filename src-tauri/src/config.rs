@@ -1,4 +1,5 @@
 use crate::app_path;
+use rusqlite::{config, ffi::Error};
 use serde::{Deserialize, Serialize};
 use std::fs;
 
@@ -29,5 +30,16 @@ pub fn initialize_config() -> Result<(), Box<dyn std::error::Error>> {
         fs::write(path, json)?;
     }
 
+    Ok(())
+}
+
+pub fn load_config() -> Result<Config, Box<dyn std::error::Error>> {
+    let json = fs::read_to_string(app_path::config_path())?;
+    Ok(serde_json::from_str(&json)?)
+}
+
+pub fn save_config(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
+    let json = serde_json::to_string_pretty(config)?;
+    fs::write(app_path::config_path(), json);
     Ok(())
 }

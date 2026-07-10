@@ -1,11 +1,13 @@
 mod app_path;
 mod config;
 mod db;
+mod shortcut;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
     Manager,
 };
+use tauri_plugin_global_shortcut::ShortcutState;
 
 fn open_setting_window(app: &tauri::AppHandle) {
     if app.get_webview_window("settings").is_some() {
@@ -20,15 +22,19 @@ fn open_setting_window(app: &tauri::AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _, event| shortcut::on_shortcut_pressed(app, event))
+                .build(),
+        )
         .setup(|app| {
-            // App Path ------------------------------------- //
+            // APP PATH ------------------------------------- //
             let path = app
                 .path()
                 .app_local_data_dir()
                 .expect("failed to get app data directory");
 
             app_path::initialize(path);
-            // ---------------------------------------------- //
 
             // CONFIG --------------------------------------- //
             config::initialize_config()?;
@@ -36,6 +42,10 @@ pub fn run() {
 
             // DATABASE ------------------------------------- //
             db::initialize_database()?;
+            // ---------------------------------------------- //
+
+            // SHORTCUT  ------------------------------------- //
+            shortcut::initialize_shortcut(app.app_handle())?;
             // ---------------------------------------------- //
 
             // RUNTIME -------------------------------------- //
