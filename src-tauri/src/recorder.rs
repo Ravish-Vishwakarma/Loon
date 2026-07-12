@@ -170,6 +170,12 @@ pub fn stop_recording() -> Result<String, String> {
     let mono = to_mono(&raw, channels);
     let samples_16k = downsample(&mono, native_rate, 16000);
 
+    let peak = samples_16k.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
+    let gain = if peak > 0.001 { 0.8 / peak } else { 1.0 };
+    let normalized: Vec<f32> = samples_16k.iter().map(|&s| (s * gain).clamp(-1.0, 1.0)).collect();
+
+    println!("audio peak: {peak:.4}, gain applied: {gain:.2}x");
+
     let mut path = std::env::temp_dir();
     let filename = format!("loon_recording_{}.wav", chrono_timestamp());
     path.push(&filename);
@@ -185,7 +191,7 @@ pub fn stop_recording() -> Result<String, String> {
     let buf = BufWriter::new(file);
     let mut writer = WavWriter::new(buf, spec).map_err(|e| e.to_string())?;
 
-    for &s in &samples_16k {
+    for &s in &normalized {
         let amp = (s * 32768.0).clamp(-32768.0, 32767.0) as i16;
         writer.write_sample(amp).map_err(|e| e.to_string())?;
     }
@@ -194,7 +200,7 @@ pub fn stop_recording() -> Result<String, String> {
     println!(
         "saved wav: {} ({} samples)",
         path.display(),
-        samples_16k.len()
+        normalized.len()
     );
 
     Ok(path.to_string_lossy().into_owned())
