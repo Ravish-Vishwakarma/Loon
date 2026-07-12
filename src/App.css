@@ -125,10 +125,12 @@
     @apply border-border outline-ring/50;
     }
   body {
-    @apply bg-background text-foreground h-full m-0 p-0;
+    @apply text-foreground h-full m-0 p-0;
+    background: transparent;
     }
   html {
     @apply font-sans h-full;
+    background: transparent;
     }
   #root {
     @apply h-full;

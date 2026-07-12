@@ -3,6 +3,20 @@ use rusqlite::{config, ffi::Error};
 use serde::{Deserialize, Serialize};
 use std::fs;
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum PasteMode {
+    Copy,
+    Paste,
+    Both,
+}
+
+impl Default for PasteMode {
+    fn default() -> Self {
+        Self::Copy
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub shortcut: String,
@@ -11,6 +25,8 @@ pub struct Config {
     pub ai_polish_prompt: String,
     pub launch_on_startup: bool,
     pub auto_polish: bool,
+    #[serde(default)]
+    pub paste_mode: PasteMode,
 }
 
 pub fn initialize_config() -> Result<(), Box<dyn std::error::Error>> {
@@ -24,6 +40,7 @@ pub fn initialize_config() -> Result<(), Box<dyn std::error::Error>> {
             ai_polish_prompt: "Clean and polish the following transcription. Correct spelling, grammar, punctuation, and formatting. Remove filler words and accidental repetitions. Fix obvious transcription mistakes using context, but do not change the meaning or add new information. Keep the tone natural and preserve speaker labels and timestamps if they are present. Output only the polished transcript. \n Transcript: \n {{transcription}}".to_string(),
             launch_on_startup: false,
             auto_polish: false,
+            paste_mode: PasteMode::default(),
         };
 
         let json = serde_json::to_string_pretty(&config)?;

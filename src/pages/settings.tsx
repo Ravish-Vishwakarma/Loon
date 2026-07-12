@@ -13,6 +13,7 @@ type Config = {
     ai_polish_prompt: string
     launch_on_startup: boolean
     auto_polish: boolean
+    paste_mode: "copy" | "paste" | "both"
 }
 
 type AppPaths = {
@@ -177,7 +178,7 @@ function SettingsPage() {
     if (!config) return null
 
     return (
-        <div className="flex flex-col gap-6 p-4 w-full">
+        <div className="flex flex-col gap-6 p-4 w-full bg-background">
             <div className="flex items-center justify-between">
                 <Header />
                 <Button onClick={handleSave} disabled={!hasChanges}>Save</Button>
@@ -196,6 +197,22 @@ function SettingsPage() {
                     />
                     <p className="text-xs text-muted-foreground">
                         Global shortcut to start/stop recording. Set to "None" to disable. <b>(Require Restart)</b>
+                    </p>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium">Output Mode</label>
+                    <select
+                        value={config.paste_mode}
+                        onChange={(e) => update("paste_mode", e.target.value as Config["paste_mode"])}
+                        className="flex h-8 w-full max-w-sm rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                        <option value="copy">Copy to clipboard</option>
+                        <option value="paste">Paste at cursor</option>
+                        <option value="both">Copy + Paste at cursor</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                        What happens after transcription. Paste simulates Ctrl+V at your cursor.
                     </p>
                 </div>
             </Section>

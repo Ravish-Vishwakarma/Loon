@@ -1,5 +1,6 @@
 mod app_path;
 mod audio;
+mod clipboard;
 mod config;
 mod db;
 mod ollama;
@@ -140,6 +141,7 @@ pub fn run() {
             recorder::stop_recording_cmd,
             recorder::is_recording_cmd,
             recorder::polish_cmd,
+            recorder::hide_launcher_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

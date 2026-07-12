@@ -3,6 +3,7 @@ use cpal::{Device, SampleFormat, Stream, StreamConfig};
 use hound::{WavSpec, WavWriter};
 use std::io::BufWriter;
 use std::sync::{Arc, Mutex};
+use tauri::Manager;
 use std::time::Instant;
 
 struct Recording {
@@ -258,10 +259,17 @@ pub async fn transcribe(wav_path: &str, model_id: &str) -> Result<String, String
 #[tauri::command]
 pub async fn polish_cmd(id: i64, text: String) -> Result<String, String> {
     let config = crate::config::load_config().map_err(|e| e.to_string())?;
+    let paste_mode = config.paste_mode.clone();
     let polished = crate::ollama::polish(&text, &config.ai_model, &config.ai_polish_prompt).await?;
     let _ = crate::db::update_transcription_ai(id, &polished);
-    if let Ok(mut clipboard) = arboard::Clipboard::new() {
-        let _ = clipboard.set_text(&polished);
-    }
+    crate::clipboard::apply_paste_mode(&polished, &paste_mode);
     Ok(polished)
+}
+
+#[tauri::command]
+pub fn hide_launcher_cmd(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("loon") {
+        win.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }

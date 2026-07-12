@@ -46,9 +46,7 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
                         match crate::recorder::transcribe(&wav_path, &model_id).await {
                             Ok(text) => {
                                 let id = crate::db::insert_transcription(&text, "").unwrap_or(0);
-                                if let Ok(mut clipboard) = arboard::Clipboard::new() {
-                                    let _ = clipboard.set_text(&text);
-                                }
+                                let paste_mode = config.as_ref().map(|c| c.paste_mode.clone()).unwrap_or_default();
 
                                 let auto = config.as_ref().map(|c| c.auto_polish).unwrap_or(false);
 
@@ -60,9 +58,7 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
                                     match crate::ollama::polish(&text, &ai_model, &prompt).await {
                                         Ok(polished) => {
                                             let _ = crate::db::update_transcription_ai(id, &polished);
-                                            if let Ok(mut clipboard) = arboard::Clipboard::new() {
-                                                let _ = clipboard.set_text(&polished);
-                                            }
+                                            crate::clipboard::apply_paste_mode(&polished, &paste_mode);
                                             let _ = app.emit("polish-done", polished);
                                         }
                                         Err(e) => {
@@ -71,6 +67,7 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
                                         }
                                     }
                                 } else {
+                                    crate::clipboard::apply_paste_mode(&text, &paste_mode);
                                     let _ = app.emit("transcription-done", serde_json::json!({"id": id, "text": text}));
                                 }
                             }
@@ -92,7 +89,6 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
 
         if !visible {
             let _ = window.show();
-            let _ = window.set_focus();
         }
 
         match crate::recorder::start_recording() {

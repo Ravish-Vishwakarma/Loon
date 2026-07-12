@@ -2,16 +2,10 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { PhysicalSize } from "@tauri-apps/api/dpi";
 import { X, Sparkles, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Status = "idle" | "recording" | "transcribing" | "copied" | "polishing" | "polished" | "error";
-
-const IDLE_WIDTH = 180
-const IDLE_HEIGHT = 36
-const RECORDING_WIDTH = 60
-const RECORDING_HEIGHT = 24
 
 function WaveBars() {
     return (
@@ -39,23 +33,22 @@ function LauncherPage() {
     const [pendingPolish, setPendingPolish] = useState<{ id: number; text: string } | null>(null);
 
     useEffect(() => {
-        const unlistenStart = listen("start-recording", async () => {
+        const unlistenStart = listen("start-recording", () => {
             setStatus("recording");
             setPendingPolish(null);
-            const win = getCurrentWindow();
-            await win.setSize(new PhysicalSize(RECORDING_WIDTH, RECORDING_HEIGHT));
         });
 
-        const unlistenTranscribing = listen("transcribing", async () => {
+        const unlistenTranscribing = listen("transcribing", () => {
             setStatus("transcribing");
-            const win = getCurrentWindow();
-            await win.setSize(new PhysicalSize(IDLE_WIDTH, IDLE_HEIGHT));
         });
 
         const unlistenDone = listen<{ id: number; text: string }>("transcription-done", (event) => {
             setStatus("copied");
             setPendingPolish(event.payload);
-            setTimeout(() => setStatus("idle"), 10000);
+            setTimeout(() => {
+                setStatus("idle");
+                invoke("hide_launcher_cmd").catch(console.error);
+            }, 10000);
         });
 
         const unlistenPolishing = listen("polishing", () => {
@@ -66,14 +59,18 @@ function LauncherPage() {
         const unlistenPolishDone = listen("polish-done", () => {
             setStatus("polished");
             setPendingPolish(null);
-            setTimeout(() => setStatus("idle"), 2000);
+            setTimeout(() => {
+                setStatus("idle");
+                invoke("hide_launcher_cmd").catch(console.error);
+            }, 5000);
         });
 
-        const unlistenError = listen("transcription-error", async () => {
+        const unlistenError = listen("transcription-error", () => {
             setStatus("error");
-            const win = getCurrentWindow();
-            await win.setSize(new PhysicalSize(IDLE_WIDTH, IDLE_HEIGHT));
-            setTimeout(() => setStatus("idle"), 2000);
+            setTimeout(() => {
+                setStatus("idle");
+                invoke("hide_launcher_cmd").catch(console.error);
+            }, 2000);
         });
 
         return () => {
@@ -111,8 +108,12 @@ function LauncherPage() {
         await getCurrentWindow().hide();
     };
 
+    const isRecording = status === "recording";
+
     return (
-        <div data-tauri-drag-region className={`flex items-center h-full w-full select-none px-2.5 ${status === "recording" ? "justify-center" : "justify-between"}`}>
+        <div
+            className="flex items-center justify-center h-full w-full select-none"
+        >
             <style>{`
                 @keyframes wave {
                     0%, 100% { height: 4px; }
@@ -120,58 +121,74 @@ function LauncherPage() {
                 }
             `}</style>
 
-            <div className="flex items-center gap-1.5 min-w-0">
-                {status === "recording" && (
-                    <WaveBars />
-                )}
-                {status === "transcribing" && (
-                    <>
-                        <Spinner className="text-blue-500" />
-                        <span className="text-[10px] text-blue-500 font-medium">Transcribing</span>
-                    </>
-                )}
-                {status === "copied" && (
-                    <>
-                        <span className="text-[10px] text-green-500 font-medium">Copied</span>
+            <div
+                data-tauri-drag-region
+                className="flex items-center h-full transition-all duration-300 ease-in-out rounded-full overflow-hidden border border-border"
+                style={{
+                    width: isRecording ? "48px" : "100%",
+                    background: "#0a0a0a",
+                }}
+            >
+                <div
+                    className="flex items-center gap-1.5 h-full transition-all duration-300 ease-in-out"
+                    style={{
+                        padding: isRecording ? "0 8px" : "0 10px",
+                        justifyContent: isRecording ? "center" : "space-between",
+                        width: "100%",
+                    }}
+                >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                        {status === "recording" && <WaveBars />}
+                        {status === "transcribing" && (
+                            <>
+                                <Spinner className="text-blue-500" />
+                                <span className="text-[10px] text-blue-500 font-medium">Transcribing</span>
+                            </>
+                        )}
+                        {status === "copied" && (
+                            <>
+                                <span className="text-[10px] text-green-500 font-medium">Copied</span>
+                                <Button
+                                    variant="ghost"
+                                    size="icon-xs"
+                                    onClick={handlePolish}
+                                    className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                                >
+                                    <Sparkles size={10} />
+                                </Button>
+                            </>
+                        )}
+                        {status === "polishing" && (
+                            <>
+                                <Spinner className="text-blue-500" />
+                                <span className="text-[10px] text-blue-500 font-medium">Polishing</span>
+                            </>
+                        )}
+                        {status === "polished" && (
+                            <span className="text-[10px] text-green-500 font-medium">Copied</span>
+                        )}
+                        {status === "error" && (
+                            <span className="text-[10px] text-red-500 font-medium">Failed</span>
+                        )}
+                        {status === "idle" && (
+                            <span className="text-[10px] text-muted-foreground">Ready</span>
+                        )}
+                    </div>
+
+                    {!isRecording && (
                         <Button
                             variant="ghost"
                             size="icon-xs"
-                            onClick={handlePolish}
-                            className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                            onClick={handleClose}
+                            className="text-muted-foreground hover:text-foreground shrink-0"
                         >
-                            <Sparkles size={10} />
+                            <X size={10} />
                         </Button>
-                    </>
-                )}
-                {status === "polishing" && (
-                    <>
-                        <Spinner className="text-blue-500" />
-                        <span className="text-[10px] text-blue-500 font-medium">Polishing</span>
-                    </>
-                )}
-                {status === "polished" && (
-                    <span className="text-[10px] text-green-500 font-medium">Copied</span>
-                )}
-                {status === "error" && (
-                    <span className="text-[10px] text-red-500 font-medium">Failed</span>
-                )}
-                {status === "idle" && (
-                    <span className="text-[10px] text-muted-foreground">Ready</span>
-                )}
+                    )}
+                </div>
             </div>
-
-            {status !== "recording" && (
-                <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={handleClose}
-                    className="text-muted-foreground hover:text-foreground shrink-0"
-                >
-                    <X size={10} />
-                </Button>
-            )}
         </div>
     );
 }
 
-export { LauncherPage };
+export { LauncherPage }
