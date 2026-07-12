@@ -38,7 +38,7 @@ function HomePage() {
     }
 
     return (
-        <div className="flex flex-col gap-4 p-4">
+        <div className="flex flex-col gap-4 p-4 min-h-screen bg-background">
             <Header />
             <div className="rounded-lg border overflow-hidden">
                 <table className="w-full text-sm table-fixed">

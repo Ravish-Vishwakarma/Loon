@@ -141,6 +141,7 @@ pub fn run() {
             config::save_config_cmd,
             config::get_app_paths_cmd,
             db::read_transcriptions,
+            db::clear_transcriptions,
             audio::process_audio,
             recorder::start_recording_cmd,
             recorder::stop_recording_cmd,

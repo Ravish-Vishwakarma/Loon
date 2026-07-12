@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core"
 import { revealItemInDir } from "@tauri-apps/plugin-opener"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { Download, Trash2, LoaderCircle, Check, ChevronDown, ChevronRight, FolderOpen } from "lucide-react"
 
@@ -178,7 +179,7 @@ function SettingsPage() {
     if (!config) return null
 
     return (
-        <div className="flex flex-col gap-6 p-4 w-full bg-background">
+        <div className="flex flex-col gap-6 p-4 w-full min-h-screen bg-background">
             <div className="flex items-center justify-between">
                 <Header />
                 <Button onClick={handleSave} disabled={!hasChanges}>Save</Button>
@@ -427,6 +428,36 @@ function SettingsPage() {
                             </div>
                         </>
                     )}
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm" className="mt-1">
+                                <Trash2 size={12} className="mr-1" />
+                                Clear All Transcriptions
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Clear all transcriptions?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete all transcriptions and their AI polish. This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={async () => {
+                                    try {
+                                        await invoke("clear_transcriptions");
+                                        toast.success("All transcriptions cleared");
+                                    } catch (e) {
+                                        console.error("clear failed:", e);
+                                        toast.error("Failed to clear transcriptions");
+                                    }
+                                }}>
+                                    Delete All
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </div>
             </div>
 

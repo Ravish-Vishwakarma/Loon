@@ -85,3 +85,11 @@ pub fn read_transcriptions() -> Result<Vec<Transcription>, String> {
 
     Ok(transcriptions)
 }
+
+#[tauri::command]
+pub fn clear_transcriptions() -> Result<(), String> {
+    let conn = open_database().map_err(|err| err.to_string())?;
+    conn.execute("DELETE FROM transcriptions", [])
+        .map_err(|err| err.to_string())?;
+    Ok(())
+}
