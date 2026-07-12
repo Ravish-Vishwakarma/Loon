@@ -59,10 +59,27 @@ pub struct AppPaths {
     pub models_dir: String,
     pub db_path: String,
     pub config_path: String,
+    pub whisper_bin: String,
 }
 
 #[tauri::command]
 pub fn get_app_paths_cmd() -> Result<AppPaths, String> {
+    let exe_dir = std::env::current_exe()
+        .map_err(|e| e.to_string())?
+        .parent()
+        .ok_or("failed to get exe parent")?
+        .to_path_buf();
+    let cwd = std::env::current_dir().unwrap_or_default();
+
+    let whisper_dir = [
+        exe_dir.join("whisper"),
+        exe_dir.clone(),
+        cwd.join("whisper"),
+        cwd.join("..").join("whisper"),
+    ]
+    .into_iter()
+    .find(|p| p.join("whisper-cli.exe").exists());
+
     Ok(AppPaths {
         models_dir: app_path::app_data_dir()
             .join("models")
@@ -70,5 +87,8 @@ pub fn get_app_paths_cmd() -> Result<AppPaths, String> {
             .to_string(),
         db_path: app_path::db_path().to_string_lossy().to_string(),
         config_path: app_path::config_path().to_string_lossy().to_string(),
+        whisper_bin: whisper_dir
+            .map(|d| d.join("whisper-cli.exe").to_string_lossy().to_string())
+            .unwrap_or_default(),
     })
 }

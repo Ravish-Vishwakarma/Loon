@@ -64,16 +64,5 @@
         "languages": [
             "multilingual"
         ]
-    },
-    {
-        "id": "parakeet-tdt-0.6b-v2",
-        "name": "Parakeet",
-        "backend": "parakeet",
-        "size": 2470000000,
-        "filename": "parakeet-tdt-0.6b-v2.nemo",
-        "download_url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2/resolve/main/parakeet-tdt-0.6b-v2.nemo",
-        "languages": [
-            "english"
-        ]
     }
 ]

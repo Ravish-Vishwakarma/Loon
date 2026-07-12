@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { invoke } from "@tauri-apps/api/core"
-import { openPath } from "@tauri-apps/plugin-opener"
+import { revealItemInDir } from "@tauri-apps/plugin-opener"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -19,6 +19,7 @@ type AppPaths = {
     models_dir: string
     db_path: string
     config_path: string
+    whisper_bin: string
 }
 
 type Model = {
@@ -380,10 +381,21 @@ function SettingsPage() {
                         <>
                             <div className="flex items-center justify-between rounded-md border px-3 py-2">
                                 <div className="flex flex-col min-w-0">
+                                    <span className="text-xs text-muted-foreground">Whisper Binary</span>
+                                    <span className="text-sm truncate" title={appPaths.whisper_bin}>{appPaths.whisper_bin || "Not found"}</span>
+                                </div>
+                                {appPaths.whisper_bin && (
+                                    <Button variant="ghost" size="icon-xs" onClick={() => revealItemInDir(appPaths.whisper_bin)}>
+                                        <FolderOpen size={12} />
+                                    </Button>
+                                )}
+                            </div>
+                            <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                                <div className="flex flex-col min-w-0">
                                     <span className="text-xs text-muted-foreground">Models Directory</span>
                                     <span className="text-sm truncate" title={appPaths.models_dir}>{appPaths.models_dir}</span>
                                 </div>
-                                <Button variant="ghost" size="icon-xs" onClick={() => openPath(appPaths.models_dir)}>
+                                <Button variant="ghost" size="icon-xs" onClick={() => revealItemInDir(appPaths.models_dir)}>
                                     <FolderOpen size={12} />
                                 </Button>
                             </div>
@@ -392,7 +404,7 @@ function SettingsPage() {
                                     <span className="text-xs text-muted-foreground">Database</span>
                                     <span className="text-sm truncate" title={appPaths.db_path}>{appPaths.db_path}</span>
                                 </div>
-                                <Button variant="ghost" size="icon-xs" onClick={() => openPath(appPaths.db_path)}>
+                                <Button variant="ghost" size="icon-xs" onClick={() => revealItemInDir(appPaths.db_path)}>
                                     <FolderOpen size={12} />
                                 </Button>
                             </div>

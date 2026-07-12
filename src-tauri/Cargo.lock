@@ -2375,6 +2375,7 @@ dependencies = [
  "dirs 5.0.1",
  "hound",
  "once_cell",
+ "regex",
  "reqwest 0.12.28",
  "runtime",
  "rusqlite",

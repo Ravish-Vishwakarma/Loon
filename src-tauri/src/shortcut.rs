@@ -56,6 +56,7 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
                                     let ai_model = config.as_ref().map(|c| c.ai_model.clone()).unwrap_or_default();
                                     let prompt = config.as_ref().map(|c| c.ai_polish_prompt.clone()).unwrap_or_default();
 
+                                    let _ = app.emit("polishing", ());
                                     match crate::ollama::polish(&text, &ai_model, &prompt).await {
                                         Ok(polished) => {
                                             let _ = crate::db::update_transcription_ai(id, &polished);

@@ -15,6 +15,14 @@
     "core:window:allow-show",
     "core:window:allow-set-focus",
     "core:webview:allow-create-webview-window",
-    "opener:allow-open-path"
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
+    "core:window:allow-set-size"
   ]
 }

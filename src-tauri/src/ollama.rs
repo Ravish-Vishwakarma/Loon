@@ -1,3 +1,5 @@
+use once_cell::sync::Lazy;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
@@ -12,8 +14,20 @@ struct GenerateResponse {
     response: String,
 }
 
+static TIMESTAMP_LINE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*\[?\d{1,2}:\d{2}(:\d{2})?\]?\s*").unwrap()
+});
+
+fn strip_timestamps(text: &str) -> String {
+    text.lines()
+        .map(|line| TIMESTAMP_LINE.replace(line, "").trim().to_string())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 pub async fn polish(text: &str, model: &str, prompt_template: &str) -> Result<String, String> {
-    let prompt = prompt_template.replace("{{transcription}}", text);
+    let clean = strip_timestamps(text);
+    let prompt = prompt_template.replace("{{transcription}}", &clean);
 
     let body = GenerateRequest {
         model: model.to_string(),

@@ -52,15 +52,32 @@ pub fn run() {
             // ---------------------------------------------- //
 
             // RUNTIME -------------------------------------- //
-            let app_dir = app.path().app_data_dir().expect("failed to resolve app data dir");
+            let app_dir = app.path().app_local_data_dir().expect("failed to resolve app data dir");
             std::fs::create_dir_all(&app_dir).expect("failed to create app data dir");
             let models_dir = app_dir.join("models");
-            let whisper_dir = std::env::current_exe()
+
+            let exe_dir = std::env::current_exe()
                 .expect("failed to get exe path")
                 .parent()
                 .expect("failed to get exe parent")
-                .join("whisper");
-            let whisper_bin = whisper_dir.join("whisper-cli");
+                .to_path_buf();
+            let cwd = std::env::current_dir().unwrap_or_default();
+
+            let whisper_dir = [
+                exe_dir.join("whisper"),          // production (directory preserved)
+                exe_dir.clone(),                   // production (flat fallback)
+                cwd.join("whisper"),              // dev: CWD = project root
+                cwd.join("..").join("whisper"),   // dev: CWD = src-tauri
+            ]
+            .into_iter()
+            .find(|p| p.join("whisper-cli.exe").exists())
+            .expect("whisper-cli.exe not found next to exe, in CWD, or one level up");
+
+            let whisper_bin = whisper_dir.join("whisper-cli.exe");
+
+            println!("[loon] models_dir: {}", models_dir.display());
+            println!("[loon] whisper_bin: {}", whisper_bin.display());
+
             std::fs::create_dir_all(&models_dir).expect("failed to create models dir");
             tauri::async_runtime::spawn(async move {
                 runtime::start_server(

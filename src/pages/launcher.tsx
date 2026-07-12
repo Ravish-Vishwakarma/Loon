@@ -2,10 +2,16 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { PhysicalSize } from "@tauri-apps/api/dpi";
 import { X, Sparkles, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Status = "idle" | "recording" | "transcribing" | "copied" | "polishing" | "polished" | "error";
+
+const IDLE_WIDTH = 180
+const IDLE_HEIGHT = 36
+const RECORDING_WIDTH = 60
+const RECORDING_HEIGHT = 24
 
 function WaveBars() {
     return (
@@ -33,19 +39,28 @@ function LauncherPage() {
     const [pendingPolish, setPendingPolish] = useState<{ id: number; text: string } | null>(null);
 
     useEffect(() => {
-        const unlistenStart = listen("start-recording", () => {
+        const unlistenStart = listen("start-recording", async () => {
             setStatus("recording");
             setPendingPolish(null);
+            const win = getCurrentWindow();
+            await win.setSize(new PhysicalSize(RECORDING_WIDTH, RECORDING_HEIGHT));
         });
 
-        const unlistenTranscribing = listen("transcribing", () => {
+        const unlistenTranscribing = listen("transcribing", async () => {
             setStatus("transcribing");
+            const win = getCurrentWindow();
+            await win.setSize(new PhysicalSize(IDLE_WIDTH, IDLE_HEIGHT));
         });
 
         const unlistenDone = listen<{ id: number; text: string }>("transcription-done", (event) => {
             setStatus("copied");
             setPendingPolish(event.payload);
-            setTimeout(() => setStatus("idle"), 3000);
+            setTimeout(() => setStatus("idle"), 10000);
+        });
+
+        const unlistenPolishing = listen("polishing", () => {
+            setStatus("polishing");
+            setPendingPolish(null);
         });
 
         const unlistenPolishDone = listen("polish-done", () => {
@@ -54,8 +69,10 @@ function LauncherPage() {
             setTimeout(() => setStatus("idle"), 2000);
         });
 
-        const unlistenError = listen("transcription-error", () => {
+        const unlistenError = listen("transcription-error", async () => {
             setStatus("error");
+            const win = getCurrentWindow();
+            await win.setSize(new PhysicalSize(IDLE_WIDTH, IDLE_HEIGHT));
             setTimeout(() => setStatus("idle"), 2000);
         });
 
@@ -63,6 +80,7 @@ function LauncherPage() {
             unlistenStart.then((f) => f());
             unlistenTranscribing.then((f) => f());
             unlistenDone.then((f) => f());
+            unlistenPolishing.then((f) => f());
             unlistenPolishDone.then((f) => f());
             unlistenError.then((f) => f());
         };
@@ -94,7 +112,7 @@ function LauncherPage() {
     };
 
     return (
-        <div data-tauri-drag-region className="flex items-center justify-between h-full w-full select-none px-2.5">
+        <div data-tauri-drag-region className={`flex items-center h-full w-full select-none px-2.5 ${status === "recording" ? "justify-center" : "justify-between"}`}>
             <style>{`
                 @keyframes wave {
                     0%, 100% { height: 4px; }
@@ -104,10 +122,7 @@ function LauncherPage() {
 
             <div className="flex items-center gap-1.5 min-w-0">
                 {status === "recording" && (
-                    <>
-                        <WaveBars />
-                        <span className="text-[10px] text-red-500 font-medium">REC</span>
-                    </>
+                    <WaveBars />
                 )}
                 {status === "transcribing" && (
                     <>
@@ -145,14 +160,16 @@ function LauncherPage() {
                 )}
             </div>
 
-            <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={handleClose}
-                className="text-muted-foreground hover:text-foreground shrink-0"
-            >
-                <X size={10} />
-            </Button>
+            {status !== "recording" && (
+                <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={handleClose}
+                    className="text-muted-foreground hover:text-foreground shrink-0"
+                >
+                    <X size={10} />
+                </Button>
+            )}
         </div>
     );
 }
