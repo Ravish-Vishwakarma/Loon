@@ -28,11 +28,3 @@ pub fn db_path() -> PathBuf {
 pub fn config_path() -> PathBuf {
     app_data_dir().join("config.json")
 }
-
-pub fn recordings_dir() -> PathBuf {
-    let path = app_data_dir().join("recordings");
-
-    std::fs::create_dir_all(&path).expect("failed to create recordings directory");
-
-    path
-}
