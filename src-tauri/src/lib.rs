@@ -106,6 +106,28 @@ pub fn run() {
                 .build(app)?;
             // ---------------------------------------------- //
 
+            // LAUNCHER POSITION ---------------------------- //
+            if let Some(win) = app.get_webview_window("loon") {
+                let win_w = 180.0_f64;
+                let win_h = 36.0_f64;
+                let (screen_w, screen_h) = win
+                    .primary_monitor()
+                    .ok()
+                    .flatten()
+                    .map(|m| {
+                        let s = m.size();
+                        (s.width as f64, s.height as f64)
+                    })
+                    .unwrap_or((1920.0, 1080.0));
+                let x = (screen_w - win_w) / 2.0;
+                let y = screen_h - win_h - 12.0;
+                let _ = win.set_position(tauri::Position::Physical(tauri::PhysicalPosition {
+                    x: x as i32,
+                    y: y as i32,
+                }));
+            }
+            // ---------------------------------------------- //
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
