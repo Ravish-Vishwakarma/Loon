@@ -1,5 +1,6 @@
 mod app_path;
 mod audio;
+mod cancel;
 mod clipboard;
 mod config;
 mod db;
@@ -39,6 +40,10 @@ pub fn run() {
                 .expect("failed to get app data directory");
 
             app_path::initialize(path);
+
+            // CANCEL TOKEN -------------------------------- //
+            cancel::init();
+            // ---------------------------------------------- //
 
             // CONFIG --------------------------------------- //
             config::initialize_config()?;
@@ -121,7 +126,7 @@ pub fn run() {
                     })
                     .unwrap_or((1920.0, 1080.0));
                 let x = (screen_w - win_w) / 2.0;
-                let y = screen_h - win_h - 12.0;
+                let y = screen_h - win_h - 60.0;
                 let _ = win.set_position(tauri::Position::Physical(tauri::PhysicalPosition {
                     x: x as i32,
                     y: y as i32,

@@ -1,6 +1,8 @@
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutEvent, ShortcutState};
 
+use crate::cancel;
+
 pub fn initialize_shortcut(app: &AppHandle) -> Result<(), String> {
     let config = crate::config::load_config().map_err(|e| e.to_string())?;
 
@@ -34,6 +36,7 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
         if crate::recorder::is_recording() {
             match crate::recorder::stop_recording() {
                 Ok(wav_path) => {
+                    cancel::reset();
                     let _ = window.emit("transcribing", ());
                     let app = app.clone();
                     tauri::async_runtime::spawn(async move {
@@ -45,9 +48,14 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
 
                         match crate::recorder::transcribe(&wav_path, &model_id).await {
                             Ok(text) => {
+                                if cancel::is_cancelled() {
+                                    let _ = app.emit("transcription-cancelled", ());
+                                    let _ = std::fs::remove_file(&wav_path);
+                                    return;
+                                }
+
                                 let id = crate::db::insert_transcription(&text, "").unwrap_or(0);
                                 let paste_mode = config.as_ref().map(|c| c.paste_mode.clone()).unwrap_or_default();
-
                                 let auto = config.as_ref().map(|c| c.auto_polish).unwrap_or(false);
 
                                 if auto {
@@ -57,6 +65,11 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
                                     let _ = app.emit("polishing", ());
                                     match crate::ollama::polish(&text, &ai_model, &prompt).await {
                                         Ok(polished) => {
+                                            if cancel::is_cancelled() {
+                                                let _ = app.emit("transcription-cancelled", ());
+                                                let _ = std::fs::remove_file(&wav_path);
+                                                return;
+                                            }
                                             let _ = crate::db::update_transcription_ai(id, &polished);
                                             crate::clipboard::apply_paste_mode(&polished, &paste_mode);
                                             let _ = app.emit("polish-done", polished);
@@ -87,12 +100,22 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
             return;
         }
 
-        if !visible {
-            let _ = window.show();
+        if visible {
+            // Window is visible and not recording — cancel flow
+            if cancel::request_cancel() {
+                // Second press — actually cancel and hide
+                let _ = app.emit("transcription-cancelled", ());
+                let _ = window.hide();
+            } else {
+                // First press — show "Press Again to Cancel"
+                let _ = window.emit("cancel-requested", ());
+            }
+            return;
         }
 
         match crate::recorder::start_recording() {
             Ok(()) => {
+                let _ = window.show();
                 let _ = window.emit("start-recording", ());
             }
             Err(e) => {
