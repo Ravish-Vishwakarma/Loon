@@ -151,18 +151,18 @@ function LauncherPage() {
                     {status === "transcribing" && (
                         <>
                             <Spinner className="text-blue-500" />
-                            <span className="text-[10px] text-blue-500 font-medium">Transcribing</span>
+                            <span className="text-[12px] text-blue-500 font-medium">Transcribing</span>
                         </>
                     )}
                     {status === "cancelling" && (
                         <>
                             <Spinner className="text-red-500" />
-                            <span className="text-[10px] text-red-500 font-bold">Press Again to Cancel</span>
+                            <span className="text-[12px] text-red-500 font-bold">Press Again to Cancel</span>
                         </>
                     )}
                     {status === "copied" && (
                         <>
-                            <span className="text-[10px] text-green-500 font-medium">Copied</span>
+                            <span className="text-[12px] text-green-500 font-medium">Copied</span>
                             <Button
                                 variant="ghost"
                                 size="icon-xs"
@@ -176,13 +176,13 @@ function LauncherPage() {
                     {status === "polishing" && (
                         <>
                             <Spinner className="text-blue-500" />
-                            <span className="text-[10px] text-blue-500 font-medium">Polishing</span>
+                            <span className="text-[12px] text-blue-500 font-medium">Polishing</span>
                         </>
                     )}
                     {status === "cancelling-polish" && (
                         <>
                             <Spinner className="text-red-500" />
-                            <span className="text-[10px] text-red-500 font-bold">Press Again to Cancel</span>
+                            <span className="text-[12px] text-red-500 font-bold">Press Again to Cancel</span>
                         </>
                     )}
                     {status === "polished" && (
@@ -192,7 +192,7 @@ function LauncherPage() {
                         <span className="text-[10px] text-red-500 font-medium">Failed</span>
                     )}
                     {status === "idle" && (
-                        <span className="text-[10px] text-muted-foreground">Ready</span>
+                        <span className="text-[12px] text-muted-foreground">Ready</span>
                     )}
                 </div>
             </div>

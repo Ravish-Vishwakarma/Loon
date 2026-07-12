@@ -462,7 +462,7 @@ function SettingsPage() {
             </div>
 
             <p className="text-xs text-muted-foreground text-center mt-4">
-                Made with love by{" "}
+                Made with ❤️ by{" "}
                 <a
                     href="https://github.com/Ravish-Vishwakarma"
                     target="_blank"
