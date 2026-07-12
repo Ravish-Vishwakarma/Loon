@@ -1,7 +1,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Sparkles, LoaderCircle } from "lucide-react";
+import { Sparkles, LoaderCircle, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Status = "idle" | "recording" | "transcribing" | "cancelling" | "copied" | "polishing" | "cancelling-polish" | "polished" | "error";
@@ -42,12 +42,7 @@ function LauncherPage() {
         });
 
         const unlistenDone = listen<{ id: number; text: string }>("transcription-done", (event) => {
-            setStatus("copied");
             setPendingPolish(event.payload);
-            setTimeout(() => {
-                setStatus("idle");
-                invoke("hide_launcher_cmd").catch(console.error);
-            }, 10000);
         });
 
         const unlistenPolishing = listen("polishing", () => {
@@ -56,12 +51,7 @@ function LauncherPage() {
         });
 
         const unlistenPolishDone = listen("polish-done", () => {
-            setStatus("polished");
             setPendingPolish(null);
-            setTimeout(() => {
-                setStatus("idle");
-                invoke("hide_launcher_cmd").catch(console.error);
-            }, 5000);
         });
 
         const unlistenCancelled = listen("transcription-cancelled", () => {
@@ -81,6 +71,7 @@ function LauncherPage() {
                     if (prev === "cancelling-polish") return "polishing";
                     return prev;
                 });
+                invoke("reset_cancel_pending_cmd").catch(console.error);
             }, 3000);
         });
 
@@ -119,7 +110,7 @@ function LauncherPage() {
         }
     };
 
-    const isRecording = status === "recording";
+    const isCompact = status === "idle" || status === "recording" || status === "copied" || status === "polished" || status === "error";
 
     return (
         <div
@@ -136,14 +127,14 @@ function LauncherPage() {
                 data-tauri-drag-region
                 className="flex items-center justify-center h-full transition-all duration-300 ease-in-out rounded-full overflow-hidden border border-border"
                 style={{
-                    width: isRecording ? "48px" : "100%",
+                    width: isCompact ? "48px" : "100%",
                     background: "#0a0a0a",
                 }}
             >
                 <div
                     className="flex items-center justify-center gap-1.5 h-full transition-all duration-300 ease-in-out"
                     style={{
-                        padding: isRecording ? "0 8px" : "0 10px",
+                        padding: isCompact ? "0 8px" : "0 10px",
                         width: "100%",
                     }}
                 >
@@ -186,7 +177,7 @@ function LauncherPage() {
                         </>
                     )}
                     {status === "polished" && (
-                        <span className="text-[10px] text-green-500 font-medium">Copied</span>
+                        <Copy size={15} className="text-green-500" />
                     )}
                     {status === "error" && (
                         <span className="text-[10px] text-red-500 font-medium">Failed</span>

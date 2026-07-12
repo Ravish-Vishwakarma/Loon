@@ -73,15 +73,24 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
                                             let _ = crate::db::update_transcription_ai(id, &polished);
                                             crate::clipboard::apply_paste_mode(&polished, &paste_mode);
                                             let _ = app.emit("polish-done", polished);
+                                            if let Some(win) = app.get_webview_window("loon") {
+                                                let _ = win.hide();
+                                            }
                                         }
                                         Err(e) => {
                                             eprintln!("auto-polish failed: {e}");
                                             let _ = app.emit("transcription-done", serde_json::json!({"id": id, "text": text}));
+                                            if let Some(win) = app.get_webview_window("loon") {
+                                                let _ = win.hide();
+                                            }
                                         }
                                     }
                                 } else {
                                     crate::clipboard::apply_paste_mode(&text, &paste_mode);
                                     let _ = app.emit("transcription-done", serde_json::json!({"id": id, "text": text}));
+                                    if let Some(win) = app.get_webview_window("loon") {
+                                        let _ = win.hide();
+                                    }
                                 }
                             }
                             Err(e) => {

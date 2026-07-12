@@ -31,6 +31,12 @@ pub fn reset() {
     }
 }
 
+pub fn reset_cancel_pending() {
+    if let Some(flag) = CANCEL_PENDING.get() {
+        flag.store(false, Ordering::SeqCst);
+    }
+}
+
 pub fn request_cancel() -> bool {
     if let Some(flag) = CANCEL_PENDING.get() {
         if flag.load(Ordering::SeqCst) {
@@ -44,4 +50,9 @@ pub fn request_cancel() -> bool {
         }
     }
     false
+}
+
+#[tauri::command]
+pub fn reset_cancel_pending_cmd() {
+    reset_cancel_pending();
 }

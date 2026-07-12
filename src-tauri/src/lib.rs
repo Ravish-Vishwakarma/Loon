@@ -148,6 +148,7 @@ pub fn run() {
             recorder::is_recording_cmd,
             recorder::polish_cmd,
             recorder::hide_launcher_cmd,
+            cancel::reset_cancel_pending_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
