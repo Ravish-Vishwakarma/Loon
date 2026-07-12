@@ -52,10 +52,20 @@ pub fn run() {
             // ---------------------------------------------- //
 
             // RUNTIME -------------------------------------- //
-            tauri::async_runtime::spawn(async {
+            let app_dir = app.path().app_data_dir().expect("failed to resolve app data dir");
+            std::fs::create_dir_all(&app_dir).expect("failed to create app data dir");
+            let models_dir = app_dir.join("models");
+            let whisper_dir = std::env::current_exe()
+                .expect("failed to get exe path")
+                .parent()
+                .expect("failed to get exe parent")
+                .join("whisper");
+            let whisper_bin = whisper_dir.join("whisper-cli");
+            std::fs::create_dir_all(&models_dir).expect("failed to create models dir");
+            tauri::async_runtime::spawn(async move {
                 runtime::start_server(
-                    "../models".to_string(),
-                    "../whisper/whisper-cli".to_string(),
+                    models_dir.to_string_lossy().to_string(),
+                    whisper_bin.to_string_lossy().to_string(),
                 )
                 .await;
             });
@@ -82,6 +92,9 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            config::load_config_cmd,
+            config::save_config_cmd,
+            config::get_app_paths_cmd,
             db::read_transcriptions,
             audio::process_audio,
             recorder::start_recording_cmd,

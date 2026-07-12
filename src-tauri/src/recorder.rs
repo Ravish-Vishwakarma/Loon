@@ -233,8 +233,7 @@ pub fn is_recording_cmd() -> Result<bool, String> {
 
 pub async fn transcribe(wav_path: &str, model_id: &str) -> Result<String, String> {
     let bytes = std::fs::read(wav_path).map_err(|e| e.to_string())?;
-    let part = reqwest::multipart::Part::bytes(bytes)
-        .file_name(wav_path.to_string());
+    let part = reqwest::multipart::Part::bytes(bytes).file_name(wav_path.to_string());
 
     let form = reqwest::multipart::Form::new()
         .text("model_id", model_id.to_string())

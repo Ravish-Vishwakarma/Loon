@@ -2,8 +2,31 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { X, Sparkles, LoaderCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type Status = "idle" | "recording" | "transcribing" | "copied" | "polishing" | "polished" | "error";
+
+function WaveBars() {
+    return (
+        <div className="flex items-center gap-[2px] h-3">
+            {[0, 1, 2, 3, 4].map((i) => (
+                <span
+                    key={i}
+                    className="w-[2px] bg-red-500 rounded-full animate-[wave_0.8s_ease-in-out_infinite]"
+                    style={{
+                        animationDelay: `${i * 0.12}s`,
+                        height: "4px",
+                    }}
+                />
+            ))}
+        </div>
+    );
+}
+
+function Spinner({ className }: { className?: string }) {
+    return <LoaderCircle className={`animate-spin ${className ?? ""}`} size={12} />;
+}
 
 function LauncherPage() {
     const [status, setStatus] = useState<Status>("idle");
@@ -71,55 +94,67 @@ function LauncherPage() {
     };
 
     return (
-        <div data-tauri-drag-region className='flex items-center justify-between h-full w-full select-none px-2'>
-            <div className='flex items-center gap-1.5'>
+        <div data-tauri-drag-region className="flex items-center justify-between h-full w-full select-none px-2.5">
+            <style>{`
+                @keyframes wave {
+                    0%, 100% { height: 4px; }
+                    50% { height: 12px; }
+                }
+            `}</style>
+
+            <div className="flex items-center gap-1.5 min-w-0">
                 {status === "recording" && (
-                    <span className='flex items-center gap-1.5 text-[11px] text-red-500 font-medium'>
-                        <span className='w-2 h-2 rounded-full bg-red-500 animate-pulse' />
-                        Recording
-                    </span>
+                    <>
+                        <WaveBars />
+                        <span className="text-[10px] text-red-500 font-medium">REC</span>
+                    </>
                 )}
                 {status === "transcribing" && (
-                    <span className='flex items-center gap-1.5 text-[11px] text-blue-500 font-medium'>
-                        <span className='w-2 h-2 rounded-full bg-blue-500 animate-pulse' />
-                        Transcribing
-                    </span>
+                    <>
+                        <Spinner className="text-blue-500" />
+                        <span className="text-[10px] text-blue-500 font-medium">Transcribing</span>
+                    </>
                 )}
                 {status === "copied" && (
-                    <span className='flex items-center gap-1.5'>
-                        <span className='text-[11px] text-green-500 font-medium'>Copied!</span>
-                        <button
+                    <>
+                        <span className="text-[10px] text-green-500 font-medium">Copied</span>
+                        <Button
+                            variant="ghost"
+                            size="icon-xs"
                             onClick={handlePolish}
-                            className='text-[10px] text-blue-500 hover:text-blue-700 font-medium cursor-pointer underline'
+                            className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
                         >
-                            Polish
-                        </button>
-                    </span>
+                            <Sparkles size={10} />
+                        </Button>
+                    </>
                 )}
                 {status === "polishing" && (
-                    <span className='flex items-center gap-1.5 text-[11px] text-blue-500 font-medium'>
-                        <span className='w-2 h-2 rounded-full bg-blue-500 animate-pulse' />
-                        Polishing
-                    </span>
+                    <>
+                        <Spinner className="text-blue-500" />
+                        <span className="text-[10px] text-blue-500 font-medium">Polishing</span>
+                    </>
                 )}
                 {status === "polished" && (
-                    <span className='text-[11px] text-green-500 font-medium'>Copied!</span>
+                    <span className="text-[10px] text-green-500 font-medium">Copied</span>
                 )}
                 {status === "error" && (
-                    <span className='text-[11px] text-red-500 font-medium'>Failed</span>
+                    <span className="text-[10px] text-red-500 font-medium">Failed</span>
                 )}
                 {status === "idle" && (
-                    <span className='text-[11px] text-muted-foreground'>Ready</span>
+                    <span className="text-[10px] text-muted-foreground">Ready</span>
                 )}
             </div>
-            <button
+
+            <Button
+                variant="ghost"
+                size="icon-xs"
                 onClick={handleClose}
-                className='text-[11px] text-muted-foreground hover:text-foreground cursor-pointer'
+                className="text-muted-foreground hover:text-foreground shrink-0"
             >
-                ✕
-            </button>
+                <X size={10} />
+            </Button>
         </div>
-    )
+    );
 }
 
-export { LauncherPage }
+export { LauncherPage };

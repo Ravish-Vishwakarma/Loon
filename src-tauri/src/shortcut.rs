@@ -45,7 +45,7 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
 
                         match crate::recorder::transcribe(&wav_path, &model_id).await {
                             Ok(text) => {
-                                let id = crate::db::insert_transcription(&text, &model_id).unwrap_or(0);
+                                let id = crate::db::insert_transcription(&text, "").unwrap_or(0);
                                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
                                     let _ = clipboard.set_text(&text);
                                 }
