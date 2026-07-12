@@ -2,6 +2,7 @@ mod app_path;
 mod audio;
 mod config;
 mod db;
+mod ollama;
 mod recorder;
 mod shortcut;
 use tauri::{
@@ -81,12 +82,12 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            db::create_transcription,
             db::read_transcriptions,
             audio::process_audio,
             recorder::start_recording_cmd,
             recorder::stop_recording_cmd,
             recorder::is_recording_cmd,
+            recorder::polish_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -37,16 +37,41 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
                     let _ = window.emit("transcribing", ());
                     let app = app.clone();
                     tauri::async_runtime::spawn(async move {
-                        let model_id = crate::config::load_config()
-                            .map(|c| c.transcription_model)
-                            .unwrap_or_else(|_| "ggml-base.en".into());
+                        let config = crate::config::load_config().ok();
+                        let model_id = config
+                            .as_ref()
+                            .map(|c| c.transcription_model.clone())
+                            .unwrap_or_else(|| "ggml-base.en".into());
 
                         match crate::recorder::transcribe(&wav_path, &model_id).await {
                             Ok(text) => {
+                                let id = crate::db::insert_transcription(&text, &model_id).unwrap_or(0);
                                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
                                     let _ = clipboard.set_text(&text);
                                 }
-                                let _ = app.emit("transcription-done", text);
+
+                                let auto = config.as_ref().map(|c| c.auto_polish).unwrap_or(false);
+
+                                if auto {
+                                    let ai_model = config.as_ref().map(|c| c.ai_model.clone()).unwrap_or_default();
+                                    let prompt = config.as_ref().map(|c| c.ai_polish_prompt.clone()).unwrap_or_default();
+
+                                    match crate::ollama::polish(&text, &ai_model, &prompt).await {
+                                        Ok(polished) => {
+                                            let _ = crate::db::update_transcription_ai(id, &polished);
+                                            if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                                                let _ = clipboard.set_text(&polished);
+                                            }
+                                            let _ = app.emit("polish-done", polished);
+                                        }
+                                        Err(e) => {
+                                            eprintln!("auto-polish failed: {e}");
+                                            let _ = app.emit("transcription-done", serde_json::json!({"id": id, "text": text}));
+                                        }
+                                    }
+                                } else {
+                                    let _ = app.emit("transcription-done", serde_json::json!({"id": id, "text": text}));
+                                }
                             }
                             Err(e) => {
                                 eprintln!("transcription failed: {e}");

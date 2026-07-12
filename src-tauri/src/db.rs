@@ -30,17 +30,28 @@ pub fn initialize_database() -> Result<()> {
     Ok(())
 }
 
-#[tauri::command]
-pub fn create_transcription(transcription: &str, ai: &str) -> Result<i64, String> {
+pub fn insert_transcription(transcription: &str, ai: &str) -> Result<i64, String> {
     let conn = open_database().map_err(|err| err.to_string())?;
 
     conn.execute(
-        "INSERT INTO transcriptions (transcription, ai) VALUES (?1, ?2, ?3)",
+        "INSERT INTO transcriptions (transcription, ai) VALUES (?1, ?2)",
         params![transcription, ai],
     )
     .map_err(|err| err.to_string())?;
 
     Ok(conn.last_insert_rowid())
+}
+
+pub fn update_transcription_ai(id: i64, ai: &str) -> Result<(), String> {
+    let conn = open_database().map_err(|err| err.to_string())?;
+
+    conn.execute(
+        "UPDATE transcriptions SET ai = ?1 WHERE id = ?2",
+        params![ai, id],
+    )
+    .map_err(|err| err.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -61,7 +72,7 @@ pub fn read_transcriptions() -> Result<Vec<Transcription>, String> {
                 id: row.get(0)?,
                 transcription: row.get(1)?,
                 ai: row.get(2)?,
-                created_at: row.get(4)?,
+                created_at: row.get(3)?,
             })
         })
         .map_err(|err| err.to_string())?;
