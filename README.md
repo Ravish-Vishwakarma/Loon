@@ -1,7 +1,7 @@
 <h1 align="center">Loon</h1>
 
 <p align="center">
-  <img src="Resources/loon.png" alt="Loon" width="300">
+  <img src="Resources/Loon.png" alt="Loon" width="300">
 </p>
 
 <p align="center">
