@@ -234,22 +234,17 @@ function SettingsPage() {
                     {downloadedModels.length === 0 ? (
                         <p className="text-xs text-muted-foreground">No models downloaded yet.</p>
                     ) : (
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-0.5">
                             {downloadedModels.map((m) => {
                                 const isActive = config.transcription_model === m.id
                                 return (
                                     <div
                                         key={m.id}
-                                        className="flex items-center justify-between rounded-md border px-3 py-2"
+                                        className="flex items-center justify-between rounded-md border px-2 py-1.5"
                                     >
-                                        <div className="flex items-center gap-3 min-w-0">
+                                        <div className="flex items-center gap-2 min-w-0">
                                             {isActive && <Check size={12} className="text-green-500 shrink-0" />}
-                                            <div className="flex flex-col min-w-0">
-                                                <span className="text-sm font-medium truncate">{m.name}</span>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {formatSize(m.size)} · {m.backend}
-                                                </span>
-                                            </div>
+                                            <span className="text-sm font-medium truncate">{m.name} ({formatSize(m.size)})</span>
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0">
                                             {!isActive && (
@@ -339,20 +334,48 @@ function SettingsPage() {
 
             {/* AI Polish */}
             <Section title="AI Polish" open={openPolish} onToggle={() => setOpenPolish(!openPolish)}>
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
                     <label className="text-sm font-medium">AI Model (Ollama)</label>
-                    <select
-                        value={config.ai_model}
-                        onChange={(e) => update("ai_model", e.target.value)}
-                        className="flex h-8 w-full max-w-sm rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    >
-                        {ollamaModels.length === 0 && <option value="">No models available</option>}
-                        {ollamaModels.map((m) => (
-                            <option key={m.model} value={m.model}>
-                                {m.name} ({m.details.parameter_size})
-                            </option>
-                        ))}
-                    </select>
+                    {ollamaModels.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No Ollama models found. Is Ollama running?</p>
+                    ) : (
+                        <div className="flex flex-col gap-0.5">
+                            {ollamaModels.map((m) => {
+                                const isActive = config.ai_model === m.model
+                                return (
+                                    <div
+                                        key={m.model}
+                                        className="flex items-center justify-between rounded-md border px-2 py-1.5"
+                                    >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            {isActive && <Check size={12} className="text-green-500 shrink-0" />}
+                                            <span className="text-sm font-medium truncate">{m.name} ({m.details.parameter_size})</span>
+                                        </div>
+                                        {!isActive && (
+                                            <Button
+                                                variant="ghost"
+                                                size="xs"
+                                                onClick={async () => {
+                                                    const updated = { ...config, ai_model: m.model }
+                                                    setConfig(updated)
+                                                    setOriginal(updated)
+                                                    try {
+                                                        await invoke("save_config_cmd", { config: updated })
+                                                        toast.success(`AI model set to ${m.name}`)
+                                                    } catch (e) {
+                                                        console.error(e)
+                                                        toast.error("Failed to save")
+                                                    }
+                                                }}
+                                            >
+                                                Select
+                                            </Button>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
                     <p className="text-xs text-muted-foreground">
                         Local Ollama model used to polish transcriptions.
                     </p>
@@ -392,7 +415,7 @@ function SettingsPage() {
                         value={config.ai_polish_prompt}
                         onChange={(e) => update("ai_polish_prompt", e.target.value)}
                         rows={5}
-                        className="flex rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                        className="flex rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y"
                     />
                     <p className="text-xs text-muted-foreground">
                         Prompt template sent to Ollama. Use {"{{transcription}}"} as placeholder for the raw text.
