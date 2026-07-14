@@ -175,11 +175,11 @@ function LauncherPage() {
                             <span className="text-[12px] text-green-500 font-medium">Copied</span>
                             <Button
                                 variant="ghost"
-                                size="icon-xs"
+                                size="icon-sm"
                                 onClick={handlePolish}
-                                className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                                className="bg-black text-white hover:bg-gray-800 rounded-full"
                             >
-                                <Sparkles size={10} />
+                                <Sparkles size={14} />
                             </Button>
                         </>
                     )}
