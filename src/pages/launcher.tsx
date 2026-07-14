@@ -1,5 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Sparkles, LoaderCircle, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,22 @@ function Spinner({ className }: { className?: string }) {
 function LauncherPage() {
     const [status, setStatus] = useState<Status>("idle");
     const [pendingPolish, setPendingPolish] = useState<{ id: number; text: string } | null>(null);
+    const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const scheduleHide = useCallback((ms: number) => {
+        if (hideTimer.current) clearTimeout(hideTimer.current);
+        hideTimer.current = setTimeout(() => {
+            setStatus("idle");
+            invoke("hide_launcher_cmd").catch(console.error);
+        }, ms);
+    }, []);
+
+    const cancelHide = useCallback(() => {
+        if (hideTimer.current) {
+            clearTimeout(hideTimer.current);
+            hideTimer.current = null;
+        }
+    }, []);
 
     useEffect(() => {
         const unlistenStart = listen("start-recording", () => {
@@ -44,27 +60,22 @@ function LauncherPage() {
         const unlistenDone = listen<{ id: number; text: string }>("transcription-done", (event) => {
             setPendingPolish(event.payload);
             setStatus("copied");
-            setTimeout(() => {
-                setStatus("idle");
-                invoke("hide_launcher_cmd").catch(console.error);
-            }, 2000);
+            scheduleHide(5000);
         });
 
         const unlistenPolishing = listen("polishing", () => {
+            cancelHide();
             setStatus("polishing");
             setPendingPolish(null);
         });
 
         const unlistenPolishDone = listen("polish-done", () => {
             setPendingPolish(null);
-            setStatus("polished");
-            setTimeout(() => {
-                setStatus("idle");
-                invoke("hide_launcher_cmd").catch(console.error);
-            }, 1500);
+            invoke("hide_launcher_cmd").catch(console.error);
         });
 
         const unlistenCancelled = listen("transcription-cancelled", () => {
+            cancelHide();
             setStatus("idle");
             invoke("hide_launcher_cmd").catch(console.error);
         });
@@ -87,11 +98,9 @@ function LauncherPage() {
 
         const unlistenError = listen<string>("transcription-error", (event) => {
             console.error("[loon] transcription error:", event.payload);
+            cancelHide();
             setStatus("error");
-            setTimeout(() => {
-                setStatus("idle");
-                invoke("hide_launcher_cmd").catch(console.error);
-            }, 2000);
+            scheduleHide(2000);
         });
 
         return () => {
@@ -108,20 +117,19 @@ function LauncherPage() {
 
     const handlePolish = async () => {
         if (!pendingPolish) return;
+        cancelHide();
         setStatus("polishing");
         try {
             await invoke("polish_cmd", { id: pendingPolish.id, text: pendingPolish.text });
+            invoke("hide_launcher_cmd").catch(console.error);
         } catch (e) {
             console.error("polish failed:", e);
             setStatus("error");
-            setTimeout(() => {
-                setStatus("idle");
-                invoke("hide_launcher_cmd").catch(console.error);
-            }, 2000);
+            scheduleHide(2000);
         }
     };
 
-    const isCompact = status === "idle" || status === "recording" || status === "copied" || status === "polished" || status === "error";
+    const isCompact = status === "idle" || status === "recording" || status === "polished" || status === "error";
 
     return (
         <div

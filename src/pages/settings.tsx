@@ -187,7 +187,7 @@ function SettingsPage() {
 
     return (
         <div className="flex flex-col gap-6 p-4 w-full min-h-screen bg-background">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between sticky top-0 z-10 bg-background py-2 -mx-4 px-4 border-b border-border">
                 <Header />
                 <Button onClick={handleSave} disabled={!hasChanges}>Save</Button>
             </div>
