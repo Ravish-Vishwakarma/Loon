@@ -5,6 +5,7 @@ use crate::backends::whisper_cpp::WhisperCppBackend;
 use axum::{Json, extract::Multipart, extract::State};
 use serde::Serialize;
 use std::io::Cursor;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 #[derive(Debug, Serialize)]
@@ -48,7 +49,10 @@ pub async fn transcribe(
         }
     };
 
-    let model_path = format!("{}\\{}", state.models_dir, model.filename);
+    let model_path = PathBuf::from(&state.models_dir)
+        .join(&model.filename)
+        .to_string_lossy()
+        .to_string();
 
     let samples = match decode_wav(&audio_bytes) {
         Ok(s) => s,

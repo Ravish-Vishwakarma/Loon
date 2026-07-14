@@ -43,6 +43,12 @@ type OllamaModel = {
     }
 }
 
+type DownloadResponse = {
+    model_id: string
+    status: string
+    path: string
+}
+
 const DEFAULT_POLISH_PROMPT = "Clean and polish the following transcription. Correct spelling, grammar, punctuation, and formatting. Remove filler words and accidental repetitions. Fix obvious transcription mistakes using context, but do not change the meaning or add new information. Keep the tone natural and preserve speaker labels and timestamps if they are present. Output only the polished transcript. \n Transcript: \n {{transcription}}"
 
 function formatSize(bytes: number): string {
@@ -85,16 +91,14 @@ function SettingsPage() {
     const [openPolish, setOpenPolish] = useState(true)
 
     const fetchDownloaded = useCallback(() => {
-        fetch("http://localhost:15000/v1/models/downloaded")
-            .then((r) => r.json())
-            .then((data: Model[]) => setDownloadedModels(data))
+        invoke<Model[]>("list_downloaded_models")
+            .then((data) => setDownloadedModels(data))
             .catch(console.error)
     }, [])
 
     const fetchAvailable = useCallback(() => {
-        fetch("http://localhost:15000/v1/models/available")
-            .then((r) => r.json())
-            .then((data: Model[]) => setAvailableModels(data))
+        invoke<Model[]>("list_available_models")
+            .then((data) => setAvailableModels(data))
             .catch(console.error)
     }, [])
 
@@ -106,9 +110,8 @@ function SettingsPage() {
         invoke<AppPaths>("get_app_paths_cmd").then(setAppPaths).catch(console.error)
         fetchDownloaded()
         fetchAvailable()
-        fetch("http://localhost:11434/api/tags")
-            .then((r) => r.json())
-            .then((data: { models: OllamaModel[] }) => setOllamaModels(data.models))
+        invoke<OllamaModel[]>("list_ollama_models")
+            .then((models) => setOllamaModels(models))
             .catch(console.error)
     }, [fetchDownloaded, fetchAvailable])
 
@@ -136,15 +139,22 @@ function SettingsPage() {
     const handleDownload = async (modelId: string) => {
         setDownloading(modelId)
         try {
-            const resp = await fetch("http://localhost:15000/v1/models/download", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ model_id: modelId }),
-            })
-            const data = await resp.json()
+            const data = await invoke<DownloadResponse>("download_model", { modelId })
             if (data.status === "downloaded") {
                 toast.success(`${modelId} downloaded`)
                 fetchDownloaded()
+
+                if (config && (config.transcription_model === "None" || config.transcription_model === "")) {
+                    const updated = { ...config, transcription_model: modelId }
+                    setConfig(updated)
+                    setOriginal(updated)
+                    try {
+                        await invoke("save_config_cmd", { config: updated })
+                        toast.success(`Active model set to ${modelId}`)
+                    } catch (e) {
+                        console.error(e)
+                    }
+                }
             } else {
                 toast.error(`Download failed: ${data.status}`)
             }
@@ -158,10 +168,7 @@ function SettingsPage() {
     const handleDelete = async (modelId: string) => {
         if (!window.confirm(`Delete ${modelId}?`)) return
         try {
-            const resp = await fetch(`http://localhost:15000/v1/models/${modelId}`, {
-                method: "DELETE",
-            })
-            const data = await resp.json()
+            const data = await invoke<DownloadResponse>("delete_model", { modelId })
             if (data.status === "deleted") {
                 toast.success(`${modelId} deleted`)
                 fetchDownloaded()
@@ -222,62 +229,66 @@ function SettingsPage() {
 
             {/* Transcription */}
             <Section title="Transcription" open={openTranscription} onToggle={() => setOpenTranscription(!openTranscription)}>
-                <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium">Active Model</label>
-                    <select
-                        value={config.transcription_model}
-                        onChange={(e) => update("transcription_model", e.target.value)}
-                        className="flex h-8 w-full max-w-sm rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    >
-                        {downloadedModels.length === 0 && <option value="">No models downloaded</option>}
-                        {downloadedModels.map((m) => (
-                            <option key={m.id} value={m.id}>
-                                {m.name} ({m.id})
-                            </option>
-                        ))}
-                    </select>
-                    <p className="text-xs text-muted-foreground">
-                        Whisper model used for speech-to-text transcription.
-                    </p>
-                </div>
-
                 <div className="flex flex-col gap-2">
                     <label className="text-sm font-medium">Downloaded Models</label>
                     {downloadedModels.length === 0 ? (
                         <p className="text-xs text-muted-foreground">No models downloaded yet.</p>
                     ) : (
-                        <div className="rounded-lg border overflow-hidden">
-                            <table className="w-full text-sm table-fixed">
-                                <thead>
-                                    <tr className="border-b text-left text-muted-foreground">
-                                        <th className="px-3 py-2 font-medium w-2/5">Model</th>
-                                        <th className="px-3 py-2 font-medium w-1/5">Size</th>
-                                        <th className="px-3 py-2 font-medium w-1/5">Backend</th>
-                                        <th className="px-3 py-2 font-medium w-1/5"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {downloadedModels.map((m) => (
-                                        <tr key={m.id} className="border-b last:border-b-0">
-                                            <td className="px-3 py-2 truncate" title={m.name}>{m.name}</td>
-                                            <td className="px-3 py-2 text-muted-foreground">{formatSize(m.size)}</td>
-                                            <td className="px-3 py-2 text-muted-foreground">{m.backend}</td>
-                                            <td className="px-3 py-2 text-right">
+                        <div className="flex flex-col gap-1">
+                            {downloadedModels.map((m) => {
+                                const isActive = config.transcription_model === m.id
+                                return (
+                                    <div
+                                        key={m.id}
+                                        className="flex items-center justify-between rounded-md border px-3 py-2"
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            {isActive && <Check size={12} className="text-green-500 shrink-0" />}
+                                            <div className="flex flex-col min-w-0">
+                                                <span className="text-sm font-medium truncate">{m.name}</span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {formatSize(m.size)} · {m.backend}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            {!isActive && (
                                                 <Button
                                                     variant="ghost"
-                                                    size="icon-xs"
-                                                    onClick={() => handleDelete(m.id)}
-                                                    className="text-destructive hover:text-destructive"
+                                                    size="xs"
+                                                    onClick={async () => {
+                                                        const updated = { ...config, transcription_model: m.id }
+                                                        setConfig(updated)
+                                                        setOriginal(updated)
+                                                        try {
+                                                            await invoke("save_config_cmd", { config: updated })
+                                                            toast.success(`Active model set to ${m.id}`)
+                                                        } catch (e) {
+                                                            console.error(e)
+                                                            toast.error("Failed to save")
+                                                        }
+                                                    }}
                                                 >
-                                                    <Trash2 size={12} />
+                                                    Select
                                                 </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                            )}
+                                            <Button
+                                                variant="ghost"
+                                                size="icon-xs"
+                                                onClick={() => handleDelete(m.id)}
+                                                className="text-destructive hover:text-destructive"
+                                            >
+                                                <Trash2 size={12} />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )
+                            })}
                         </div>
                     )}
+                    <p className="text-xs text-muted-foreground">
+                        Whisper model used for speech-to-text transcription.
+                    </p>
                 </div>
 
                 <div className="flex flex-col gap-2">

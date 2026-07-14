@@ -1,5 +1,5 @@
 use crate::backends::backend::Backend;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub struct WhisperCppBackend {
@@ -23,7 +23,14 @@ impl Backend for WhisperCppBackend {
 
         write_wav(&wav_path, audio)?;
 
+        let binary = PathBuf::from(&self.binary_path);
+        let working_dir = binary
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| temp_dir.path().to_path_buf());
+
         let output = Command::new(&self.binary_path)
+            .current_dir(&working_dir)
             .arg("-m")
             .arg(&self.model_path)
             .arg("-f")
@@ -35,7 +42,14 @@ impl Backend for WhisperCppBackend {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(format!("whisper-cli failed: {}", stderr).into());
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            return Err(format!(
+                "whisper-cli failed (exit {}): stdout={} stderr={}",
+                output.status,
+                stdout.trim(),
+                stderr.trim()
+            )
+            .into());
         }
 
         let out_path = temp_dir.path().join("output.txt");

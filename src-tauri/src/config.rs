@@ -1,5 +1,4 @@
 use crate::app_path;
-use rusqlite::{config, ffi::Error};
 use serde::{Deserialize, Serialize};
 use std::fs;
 
@@ -34,7 +33,7 @@ pub fn initialize_config() -> Result<(), Box<dyn std::error::Error>> {
 
     if !path.exists() {
         let config = Config {
-            shortcut: "None".to_string(),
+            shortcut: "Ctrl+Shift+Space".to_string(),
             ai_model: "None".to_string(),
             transcription_model: "None".to_string(),
             ai_polish_prompt: "Clean and polish the following transcription. Correct spelling, grammar, punctuation, and formatting. Remove filler words and accidental repetitions. Fix obvious transcription mistakes using context, but do not change the meaning or add new information. Keep the tone natural and preserve speaker labels and timestamps if they are present. Output only the polished transcript. \n Transcript: \n {{transcription}}".to_string(),
@@ -89,8 +88,8 @@ pub fn get_app_paths_cmd() -> Result<AppPaths, String> {
     let cwd = std::env::current_dir().unwrap_or_default();
 
     let whisper_dir = [
+        exe_dir.join("_up_").join("whisper"),
         exe_dir.join("whisper"),
-        exe_dir.clone(),
         cwd.join("whisper"),
         cwd.join("..").join("whisper"),
     ]

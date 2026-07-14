@@ -4,6 +4,7 @@ use futures_util::StreamExt;
 use reqwest;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::File;
@@ -39,7 +40,7 @@ pub async fn downloaded_models(
 
     let mut downloaded = Vec::new();
     for model in models {
-        let file_path = format!("{}\\{}", state.models_dir, model.filename);
+        let file_path = PathBuf::from(&state.models_dir).join(&model.filename);
         if fs::try_exists(&file_path).await.unwrap_or(false) {
             downloaded.push(model);
         }
@@ -73,7 +74,10 @@ pub async fn download_model_by_id(
         }
     };
 
-    let output_path = format!("{}\\{}", state.models_dir, model.filename);
+    let output_path = PathBuf::from(&state.models_dir)
+        .join(&model.filename)
+        .to_string_lossy()
+        .to_string();
 
     match download_model(&model.download_url, &output_path).await {
         Ok(_) => Json(DownloadResponse {
@@ -106,7 +110,10 @@ pub async fn delete_model_by_id(
         }
     };
 
-    let file_path = format!("{}\\{}", state.models_dir, model.filename);
+    let file_path = PathBuf::from(&state.models_dir)
+        .join(&model.filename)
+        .to_string_lossy()
+        .to_string();
 
     match fs::remove_file(&file_path).await {
         Ok(_) => Json(DownloadResponse {

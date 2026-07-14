@@ -22,11 +22,24 @@ pub async fn start_server(models_dir: String, whisper_binary: String) {
         .layer(CorsLayer::permissive())
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:15000")
-        .await
-        .unwrap();
-
-    tracing::info!("Runtime server running on http://127.0.0.1:15000");
-
-    axum::serve(listener, app).await.unwrap();
+    for attempt in 1..=5 {
+        match tokio::net::TcpListener::bind("127.0.0.1:15000").await {
+            Ok(listener) => {
+                eprintln!("[loon] runtime server running on http://127.0.0.1:15000");
+                if let Err(e) = axum::serve(listener, app).await {
+                    eprintln!("[loon] runtime server error: {e}");
+                }
+                return;
+            }
+            Err(e) => {
+                eprintln!(
+                    "[loon] failed to bind runtime server on port 15000 (attempt {attempt}/5): {e}"
+                );
+                if attempt < 5 {
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                }
+            }
+        }
+    }
+    eprintln!("[loon] runtime server failed to start after 5 attempts");
 }

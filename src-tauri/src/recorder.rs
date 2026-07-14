@@ -252,14 +252,30 @@ pub async fn transcribe(wav_path: &str, model_id: &str) -> Result<String, String
         .multipart(form)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            format!(
+                "failed to connect to runtime server (is it running?): {e}"
+            )
+        })?;
 
+    let status = resp.status();
     let body: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
 
-    body.get("text")
+    let text = body
+        .get("text")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
-        .ok_or_else(|| format!("unexpected response: {body}"))
+        .ok_or_else(|| format!("unexpected response: {body}"))?;
+
+    if text.starts_with("error:") {
+        return Err(text);
+    }
+
+    if !status.is_success() {
+        return Err(format!("runtime server returned {status}: {text}"));
+    }
+
+    Ok(text)
 }
 
 #[tauri::command]

@@ -43,6 +43,11 @@ function LauncherPage() {
 
         const unlistenDone = listen<{ id: number; text: string }>("transcription-done", (event) => {
             setPendingPolish(event.payload);
+            setStatus("copied");
+            setTimeout(() => {
+                setStatus("idle");
+                invoke("hide_launcher_cmd").catch(console.error);
+            }, 2000);
         });
 
         const unlistenPolishing = listen("polishing", () => {
@@ -52,6 +57,11 @@ function LauncherPage() {
 
         const unlistenPolishDone = listen("polish-done", () => {
             setPendingPolish(null);
+            setStatus("polished");
+            setTimeout(() => {
+                setStatus("idle");
+                invoke("hide_launcher_cmd").catch(console.error);
+            }, 1500);
         });
 
         const unlistenCancelled = listen("transcription-cancelled", () => {
@@ -75,7 +85,8 @@ function LauncherPage() {
             }, 3000);
         });
 
-        const unlistenError = listen("transcription-error", () => {
+        const unlistenError = listen<string>("transcription-error", (event) => {
+            console.error("[loon] transcription error:", event.payload);
             setStatus("error");
             setTimeout(() => {
                 setStatus("idle");

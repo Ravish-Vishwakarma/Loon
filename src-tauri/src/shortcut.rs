@@ -54,7 +54,13 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
                                     return;
                                 }
 
-                                let id = crate::db::insert_transcription(&text, "").unwrap_or(0);
+                                let id = match crate::db::insert_transcription(&text, "") {
+                                    Ok(id) => id,
+                                    Err(e) => {
+                                        eprintln!("failed to insert transcription: {e}");
+                                        0
+                                    }
+                                };
                                 let paste_mode = config.as_ref().map(|c| c.paste_mode.clone()).unwrap_or_default();
                                 let auto = config.as_ref().map(|c| c.auto_polish).unwrap_or(false);
 
@@ -73,24 +79,16 @@ pub fn on_shortcut_pressed(app: &AppHandle, event: ShortcutEvent) {
                                             let _ = crate::db::update_transcription_ai(id, &polished);
                                             crate::clipboard::apply_paste_mode(&polished, &paste_mode);
                                             let _ = app.emit("polish-done", polished);
-                                            if let Some(win) = app.get_webview_window("loon") {
-                                                let _ = win.hide();
-                                            }
                                         }
                                         Err(e) => {
                                             eprintln!("auto-polish failed: {e}");
+                                            crate::clipboard::apply_paste_mode(&text, &paste_mode);
                                             let _ = app.emit("transcription-done", serde_json::json!({"id": id, "text": text}));
-                                            if let Some(win) = app.get_webview_window("loon") {
-                                                let _ = win.hide();
-                                            }
                                         }
                                     }
                                 } else {
                                     crate::clipboard::apply_paste_mode(&text, &paste_mode);
                                     let _ = app.emit("transcription-done", serde_json::json!({"id": id, "text": text}));
-                                    if let Some(win) = app.get_webview_window("loon") {
-                                        let _ = win.hide();
-                                    }
                                 }
                             }
                             Err(e) => {

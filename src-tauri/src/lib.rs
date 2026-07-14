@@ -5,6 +5,7 @@ mod clipboard;
 mod config;
 mod db;
 mod ollama;
+mod proxy;
 mod recorder;
 mod shortcut;
 use tauri::{
@@ -12,7 +13,6 @@ use tauri::{
     tray::TrayIconBuilder,
     Manager,
 };
-use tauri_plugin_global_shortcut::ShortcutState;
 
 fn open_setting_window(app: &tauri::AppHandle) {
     if app.get_webview_window("settings").is_some() {
@@ -34,10 +34,13 @@ pub fn run() {
         )
         .setup(|app| {
             // APP PATH ------------------------------------- //
-            let path = app
-                .path()
-                .app_local_data_dir()
-                .expect("failed to get app data directory");
+            let path = match app.path().app_local_data_dir() {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!("[loon] failed to get app data directory: {e}");
+                    return Ok(());
+                }
+            };
 
             app_path::initialize(path);
 
@@ -46,45 +49,75 @@ pub fn run() {
             // ---------------------------------------------- //
 
             // CONFIG --------------------------------------- //
-            config::initialize_config()?;
+            if let Err(e) = config::initialize_config() {
+                eprintln!("[loon] config init failed: {e}");
+                return Ok(());
+            }
             // ---------------------------------------------- //
 
             // DATABASE ------------------------------------- //
-            db::initialize_database()?;
+            if let Err(e) = db::initialize_database() {
+                eprintln!("[loon] db init failed: {e}");
+                return Ok(());
+            }
             // ---------------------------------------------- //
 
             // SHORTCUT  ------------------------------------- //
-            shortcut::initialize_shortcut(app.app_handle())?;
+            if let Err(e) = shortcut::initialize_shortcut(app.app_handle()) {
+                eprintln!("[loon] shortcut init failed: {e}");
+            }
             // ---------------------------------------------- //
 
             // RUNTIME -------------------------------------- //
-            let app_dir = app.path().app_local_data_dir().expect("failed to resolve app data dir");
-            std::fs::create_dir_all(&app_dir).expect("failed to create app data dir");
-            let models_dir = app_dir.join("models");
+            let models_dir = app_path::app_data_dir().join("models");
 
             let exe_dir = std::env::current_exe()
-                .expect("failed to get exe path")
-                .parent()
-                .expect("failed to get exe parent")
-                .to_path_buf();
+                .ok()
+                .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+                .unwrap_or_default();
             let cwd = std::env::current_dir().unwrap_or_default();
+            let resource_dir = app.path().resource_dir().unwrap_or_default();
 
-            let whisper_dir = [
-                exe_dir.join("whisper"),          // production (directory preserved)
-                exe_dir.clone(),                   // production (flat fallback)
-                cwd.join("whisper"),              // dev: CWD = project root
-                cwd.join("..").join("whisper"),   // dev: CWD = src-tauri
+            // On Windows NSIS, bundled resources land in a _up_ subdirectory.
+            // The "resources" config copies the whisper/ directory contents
+            // into the resource dir. Check all plausible locations.
+            let candidates: Vec<std::path::PathBuf> = [
+                Some(exe_dir.join("_up_").join("whisper")),  // NSIS updater layout
+                Some(exe_dir.join("whisper")),                // production (directory preserved)
+                Some(exe_dir.clone()),                         // production (flat fallback)
+                Some(resource_dir.join("whisper")),            // Tauri bundled resource
+                Some(resource_dir.clone()),
+                Some(cwd.join("whisper")),                    // dev: CWD = project root
+                Some(cwd.join("..").join("whisper")),         // dev: CWD = src-tauri
             ]
             .into_iter()
-            .find(|p| p.join("whisper-cli.exe").exists())
-            .expect("whisper-cli.exe not found next to exe, in CWD, or one level up");
+            .flatten()
+            .collect();
 
-            let whisper_bin = whisper_dir.join("whisper-cli.exe");
+            eprintln!("[loon] exe_dir: {}", exe_dir.display());
+            eprintln!("[loon] cwd: {}", cwd.display());
+            eprintln!("[loon] resource_dir: {}", resource_dir.display());
+            for c in &candidates {
+                eprintln!("[loon]   checking: {} (exists={})", c.display(), c.join("whisper-cli.exe").exists());
+            }
 
-            println!("[loon] models_dir: {}", models_dir.display());
-            println!("[loon] whisper_bin: {}", whisper_bin.display());
+            let whisper_bin = candidates
+                .iter()
+                .find(|p| p.join("whisper-cli.exe").exists())
+                .map(|p| p.join("whisper-cli.exe"))
+                .unwrap_or_else(|| {
+                    let fallback = exe_dir.join("whisper").join("whisper-cli.exe");
+                    eprintln!(
+                        "[loon] WARNING: whisper-cli.exe not found in any candidate, falling back to {}",
+                        fallback.display()
+                    );
+                    fallback
+                });
 
-            std::fs::create_dir_all(&models_dir).expect("failed to create models dir");
+            eprintln!("[loon] models_dir: {}", models_dir.display());
+            eprintln!("[loon] whisper_bin: {}", whisper_bin.display());
+
+            let _ = std::fs::create_dir_all(&models_dir);
             tauri::async_runtime::spawn(async move {
                 runtime::start_server(
                     models_dir.to_string_lossy().to_string(),
@@ -149,6 +182,11 @@ pub fn run() {
             recorder::polish_cmd,
             recorder::hide_launcher_cmd,
             cancel::reset_cancel_pending_cmd,
+            proxy::list_available_models,
+            proxy::list_downloaded_models,
+            proxy::download_model,
+            proxy::delete_model,
+            proxy::list_ollama_models,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
