@@ -21,6 +21,7 @@
 - **Floating launcher** — A tiny always-on-top pill that shows recording/transcription status
 - **System tray** — Runs quietly in the tray with quick access to settings
 - **Transcription history** — Browse and manage all past transcriptions
+- **Built-in API server** — The runtime exposes a local HTTP API (`localhost:15000`) that other apps can use for transcription and model management
 
 ## How It Works
 
@@ -73,6 +74,27 @@ npm run tauri dev
 
 # Build for production
 npm run tauri build
+```
+
+## Built-in API
+
+Loon runs a local HTTP server on `http://localhost:15000` that other apps can use to transcribe audio or manage models.
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/v1/health` | GET | Health check |
+| `/v1/transcribe` | POST | Transcribe audio (multipart form: `file` + `model_id`) |
+| `/v1/models/available` | GET | List all available models |
+| `/v1/models/downloaded` | GET | List downloaded models |
+| `/v1/models/download` | POST | Download a model (`{ "model_id": "..." }`) |
+| `/v1/models/{model_id}` | DELETE | Delete a model |
+
+Example — transcribe a WAV file with curl:
+
+```bash
+curl -X POST http://localhost:15000/v1/transcribe \
+  -F "file=@recording.wav" \
+  -F "model_id=whisper-base"
 ```
 
 ## Configuration
