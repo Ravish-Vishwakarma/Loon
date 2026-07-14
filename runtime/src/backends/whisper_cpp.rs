@@ -29,16 +29,24 @@ impl Backend for WhisperCppBackend {
             .map(|p| p.to_path_buf())
             .unwrap_or_else(|| temp_dir.path().to_path_buf());
 
-        let output = Command::new(&self.binary_path)
-            .current_dir(&working_dir)
+        let mut cmd = Command::new(&self.binary_path);
+        cmd.current_dir(&working_dir)
             .arg("-m")
             .arg(&self.model_path)
             .arg("-f")
             .arg(&wav_path)
             .arg("-otxt")
             .arg("-of")
-            .arg(temp_dir.path().join("output"))
-            .output()?;
+            .arg(temp_dir.path().join("output"));
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+
+        let output = cmd.output()?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
